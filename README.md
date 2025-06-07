@@ -77,3 +77,38 @@ Once you have the public IP, you can access the application by adding the port n
 - Metrics: `http://<public-ip>:3000/metrics`
 
 Note: The public IP may change if the task is restarted, as it's dynamically assigned.
+
+## Deployment
+
+### Deploy All Stacks
+
+```bash
+cdk deploy --all
+```
+
+### Deploy Individual Stacks
+
+```bash
+# Deploy VPC Stack (must be deployed first)
+cdk deploy VpcStack
+
+# Deploy ECR Stack
+cdk deploy EcrStack
+
+# Deploy ECS Stack
+cdk deploy EcsStack
+```
+
+### Destroy Stacks
+
+```bash
+# Destroy all stacks
+cdk destroy --all
+
+# Or destroy individual stacks (in reverse order)
+cdk destroy EcsStack
+cdk destroy EcrStack
+cdk destroy VpcStack
+```
+
+Note: The ECR repository has a RETAIN policy to prevent accidental deletion. You'll need to manually delete it if desired.
