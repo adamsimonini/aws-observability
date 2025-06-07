@@ -41,23 +41,9 @@ cdk destroy EcrStack
   - Repository name: "aws-observability-app"
 - This stack is relatively stable and only needs updates if you change repository settings
 
-### CodeBuildStack
+### Image build
 
-```bash
-# Deploy
-cdk deploy CodeBuildStack
-
-# Destroy
-cdk destroy CodeBuildStack
-```
-
-- Sets up your CI/CD pipeline
-- Creates a CodeBuild project that:
-  - Builds your Docker images
-  - Pushes them to ECR
-  - Uses GitHub as the source
-  - Has proper IAM permissions to push to ECR
-- This stack is updated when you need to change build configurations
+The image is build via a github action. The secrets on the repo provide github to a user with ECR permissions. It's builds the image within github and pushes the finished product to ECR.
 
 ### EcsStack
 
@@ -85,8 +71,11 @@ cdk destroy EcsStack
 1. Deploy in order from top to bottom due to dependencies
 2. If you need to update your application:
    - Most changes will only require `cdk deploy EcsStack`
-   - Build changes will require `cdk deploy CodeBuildStack`
    - Rarely need to update VpcStack or EcrStack
+3. CI/CD is handled by GitHub Actions:
+   - Builds Docker images on push to main
+   - Pushes images to ECR
+   - Tags images with semantic versioning
 
 ## Best Practices
 
@@ -99,7 +88,6 @@ cdk destroy EcsStack
 
 1. Destroy in reverse order of deployment due to dependencies:
    ```bash
-   cdk destroy CodeBuildStack
    cdk destroy EcsStack
    cdk destroy EcrStack
    cdk destroy VpcStack

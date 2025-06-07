@@ -4,7 +4,6 @@ import * as cdk from "aws-cdk-lib";
 import { VpcStack } from "../lib/cdk-stack";
 import { EcrStack } from "../lib/cdk-stack";
 import { EcsStack } from "../lib/cdk-stack";
-import { CodeBuildStack } from "../lib/cdk-stack";
 
 const app = new cdk.App();
 
@@ -38,22 +37,8 @@ const ecsStack = new EcsStack(
   }
 );
 
-// Create the CodeBuild stack, which depends on ECR
-const codeBuildStack = new CodeBuildStack(
-  app,
-  "CodeBuildStack",
-  ecrStack.repository,
-  {
-    env: {
-      account: process.env.CDK_DEFAULT_ACCOUNT,
-      region: process.env.CDK_DEFAULT_REGION,
-    },
-  }
-);
-
 // Add dependencies
 ecsStack.addDependency(vpcStack);
 ecsStack.addDependency(ecrStack);
-codeBuildStack.addDependency(ecrStack);
 
 app.synth();
