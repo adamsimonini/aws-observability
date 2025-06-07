@@ -2,6 +2,55 @@
 
 This project contains the CDK infrastructure code for AWS Observability.
 
+## CI/CD Pipeline (GitHub Actions)
+
+The project uses GitHub Actions for continuous integration and deployment. The workflow is triggered on every push to the main branch.
+
+### Workflow Steps
+
+1. **Checkout Code**
+
+   - Uses `actions/checkout@v2` to get the latest code
+
+2. **AWS Authentication**
+
+   - Configures AWS credentials using access keys
+   - Region: ca-central-1
+   - Required for ECR access
+
+3. **ECR Login**
+
+   - Logs into Amazon ECR using `aws-actions/amazon-ecr-login@v1`
+   - Enables Docker to push to ECR
+
+4. **Version Tagging**
+
+   - Uses `git_update.sh` script to:
+     - Increment version numbers (major/minor/patch)
+     - Create git tags
+     - Output new version for Docker tagging
+
+5. **Docker Build and Push**
+   - Builds Docker image with two tags:
+     - Version tag (e.g., v1.0.0)
+     - Latest tag
+   - Pushes both tags to ECR
+   - Verifies tags in ECR
+
+### Required Secrets
+
+The following secrets must be configured in GitHub:
+
+- `AWS_ACCESS_KEY_ID`: AWS access key with ECR permissions
+- `AWS_SECRET_ACCESS_KEY`: Corresponding AWS secret key
+
+### ECR Repository
+
+- Name: `aws-observability-app`
+- Region: ca-central-1
+- Lifecycle rules: Keeps 5 most recent images
+- Removal policy: RETAIN
+
 ## Stack Descriptions
 
 ### VpcStack
@@ -40,10 +89,6 @@ cdk destroy EcrStack
   - RETAIN removal policy to prevent accidental deletion
   - Repository name: "aws-observability-app"
 - This stack is relatively stable and only needs updates if you change repository settings
-
-### Image build
-
-The image is build via a github action. The secrets on the repo provide github to a user with ECR permissions. It's builds the image within github and pushes the finished product to ECR.
 
 ### EcsStack
 

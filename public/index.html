@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AWS Observability Demo</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        line-height: 1.6;
+        margin: 0;
+        padding: 20px;
+        background: #f5f5f5;
+        color: #333;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #2c3e50;
+        margin-bottom: 20px;
+      }
+      .endpoints {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 5px;
+        margin-top: 20px;
+      }
+      .endpoint {
+        margin: 10px 0;
+        padding: 10px;
+        background: white;
+        border-radius: 5px;
+        border: 1px solid #e9ecef;
+      }
+      .endpoint a {
+        color: #007bff;
+        text-decoration: none;
+      }
+      .endpoint a:hover {
+        text-decoration: underline;
+      }
+      .status {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 0.9em;
+        margin-left: 10px;
+      }
+      .healthy {
+        background: #d4edda;
+        color: #155724;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>AWS Observability Demo</h1>
+      <p>
+        Welcome to the AWS Observability Demo application. This page
+        demonstrates the integration of Express.js with AWS ECS and CloudWatch.
+      </p>
+
+      <div class="endpoints">
+        <h2>Available Endpoints</h2>
+        <div class="endpoint">
+          <a href="/health" target="_blank">Health Check</a>
+          <span class="status healthy">GET /health</span>
+        </div>
+        <div class="endpoint">
+          <a href="/metrics" target="_blank">Metrics</a>
+          <span class="status healthy">GET /metrics</span>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

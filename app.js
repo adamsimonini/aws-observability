@@ -2,6 +2,9 @@ const express = require("express");
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Serve static files from the public directory
+app.use(express.static("public"));
+
 // Health check endpoint
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "healthy" });
@@ -16,9 +19,9 @@ app.get("/metrics", (req, res) => {
   });
 });
 
-// Main endpoint
+// Main endpoint now serves the HTML page
 app.get("/", (req, res) => {
-  res.send("Hello from AWS ECS!");
+  res.sendFile(__dirname + "/public/index.html");
 });
 
 app.listen(port, () => {
