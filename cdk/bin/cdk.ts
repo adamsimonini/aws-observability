@@ -1,23 +1,59 @@
 #!/usr/bin/env node
+import "source-map-support/register";
 import * as cdk from "aws-cdk-lib";
-import { CdkStack } from "../lib/cdk-stack";
+import { VpcStack } from "../lib/cdk-stack";
+import { EcrStack } from "../lib/cdk-stack";
+import { EcsStack } from "../lib/cdk-stack";
+import { CodeBuildStack } from "../lib/cdk-stack";
 
 const app = new cdk.App();
-new CdkStack(app, "CdkStack", {
-  /* If you don't specify 'env', this stack will be environment-agnostic.
-   * Account/Region-dependent features and context lookups will not work,
-   * but a single synthesized template can be deployed anywhere. */
 
-  /* Uncomment the next line to specialize this stack for the AWS Account
-   * and Region that are implied by the current CLI configuration. */
+// Create the VPC stack first
+const vpcStack = new VpcStack(app, "VpcStack", {
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
     region: process.env.CDK_DEFAULT_REGION,
   },
-
-  /* Uncomment the next line if you know exactly what Account and Region you
-   * want to deploy the stack to. */
-  // env: { account: '123456789012', region: 'us-east-1' },
-
-  /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
 });
+
+// Create the ECR stack
+const ecrStack = new EcrStack(app, "EcrStack", {
+  env: {
+    account: process.env.CDK_DEFAULT_ACCOUNT,
+    region: process.env.CDK_DEFAULT_REGION,
+  },
+});
+
+// Create the ECS stack, which depends on VPC and ECR
+const ecsStack = new EcsStack(
+  app,
+  "EcsStack",
+  vpcStack.vpc,
+  ecrStack.repository,
+  {
+    env: {
+      account: process.env.CDK_DEFAULT_ACCOUNT,
+      region: process.env.CDK_DEFAULT_REGION,
+    },
+  }
+);
+
+// Create the CodeBuild stack, which depends on ECR
+const codeBuildStack = new CodeBuildStack(
+  app,
+  "CodeBuildStack",
+  ecrStack.repository,
+  {
+    env: {
+      account: process.env.CDK_DEFAULT_ACCOUNT,
+      region: process.env.CDK_DEFAULT_REGION,
+    },
+  }
+);
+
+// Add dependencies
+ecsStack.addDependency(vpcStack);
+ecsStack.addDependency(ecrStack);
+codeBuildStack.addDependency(ecrStack);
+
+app.synth();
