@@ -1,6 +1,19 @@
 const express = require("express");
+const rateLimit = require("express-rate-limit");
 const app = express();
 const port = process.env.PORT || 3000;
+
+// Rate limiting configuration
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: "Too many requests from this IP, please try again later.",
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+// Apply rate limiting to all routes
+app.use(limiter);
 
 // Serve static files from the public directory
 app.use(express.static("public"));
