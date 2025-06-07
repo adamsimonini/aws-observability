@@ -229,6 +229,9 @@ cdk deploy VpcStack
 cdk deploy EcrStack
 
 # Deploy ECS Stack
+cdk deploy DynamoDBStack
+
+# Deploy ECS Stack
 cdk deploy EcsStack
 ```
 
@@ -240,6 +243,7 @@ cdk destroy --all
 
 # Or destroy individual stacks (in reverse order)
 cdk destroy EcsStack
+cdk destroy DynamoDBStack
 cdk destroy EcrStack
 cdk destroy VpcStack
 ```
