@@ -22,7 +22,8 @@
         border-radius: 10px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
-      h1 {
+      h1,
+      h2 {
         color: #2c3e50;
         margin-bottom: 20px;
       }
@@ -57,6 +58,64 @@
         background: #d4edda;
         color: #155724;
       }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+      input {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+      button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      .crypto-list {
+        margin-top: 20px;
+      }
+      .crypto-item {
+        background: white;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        border: 1px solid #e9ecef;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .delete-btn {
+        background: #dc3545;
+      }
+      .delete-btn:hover {
+        background: #c82333;
+      }
+      .message {
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+      }
+      .success {
+        background: #d4edda;
+        color: #155724;
+      }
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+      }
     </style>
   </head>
   <body>
@@ -64,7 +123,8 @@
       <h1>AWS Observability Demo</h1>
       <p>
         Welcome to the AWS Observability Demo application. This page
-        demonstrates the integration of Express.js with AWS ECS and CloudWatch.
+        demonstrates the integration of Express.js with AWS ECS, DynamoDB, and
+        CloudWatch.
       </p>
 
       <div class="endpoints">
@@ -78,6 +138,127 @@
           <span class="status healthy">GET /metrics</span>
         </div>
       </div>
+
+      <div class="crypto-management">
+        <h2>Cryptocurrency Management</h2>
+        <form id="cryptoForm">
+          <div class="form-group">
+            <label for="symbol">Symbol (e.g., BTC):</label>
+            <input type="text" id="symbol" required />
+          </div>
+          <div class="form-group">
+            <label for="name">Name (e.g., Bitcoin):</label>
+            <input type="text" id="name" required />
+          </div>
+          <div class="form-group">
+            <label for="price">Price (USD):</label>
+            <input type="number" id="price" step="0.01" required />
+          </div>
+          <button type="submit">Add Cryptocurrency</button>
+        </form>
+
+        <div id="message"></div>
+
+        <div class="crypto-list">
+          <h2>Current Cryptocurrencies</h2>
+          <div id="cryptoList"></div>
+        </div>
+      </div>
     </div>
+
+    <script>
+      // Function to display messages
+      function showMessage(message, isError = false) {
+        const messageDiv = document.getElementById("message");
+        messageDiv.textContent = message;
+        messageDiv.className = `message ${isError ? "error" : "success"}`;
+        setTimeout(() => {
+          messageDiv.textContent = "";
+          messageDiv.className = "message";
+        }, 3000);
+      }
+
+      // Function to load cryptocurrencies
+      async function loadCryptocurrencies() {
+        try {
+          const response = await fetch("/api/crypto");
+          const data = await response.json();
+          const cryptoList = document.getElementById("cryptoList");
+          cryptoList.innerHTML = "";
+
+          data.forEach((crypto) => {
+            const div = document.createElement("div");
+            div.className = "crypto-item";
+            div.innerHTML = `
+              <div>
+                <strong>${crypto.symbol}</strong> - ${crypto.name}
+                <br>
+                Price: $${crypto.price.toFixed(2)}
+              </div>
+              <button class="delete-btn" onclick="deleteCrypto('${
+                crypto.symbol
+              }')">Delete</button>
+            `;
+            cryptoList.appendChild(div);
+          });
+        } catch (error) {
+          showMessage("Error loading cryptocurrencies", true);
+        }
+      }
+
+      // Function to add cryptocurrency
+      async function addCrypto(event) {
+        event.preventDefault();
+        const symbol = document.getElementById("symbol").value.toUpperCase();
+        const name = document.getElementById("name").value;
+        const price = document.getElementById("price").value;
+
+        try {
+          const response = await fetch("/api/crypto", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ symbol, name, price }),
+          });
+
+          if (response.ok) {
+            showMessage("Cryptocurrency added successfully");
+            document.getElementById("cryptoForm").reset();
+            loadCryptocurrencies();
+          } else {
+            throw new Error("Failed to add cryptocurrency");
+          }
+        } catch (error) {
+          showMessage("Error adding cryptocurrency", true);
+        }
+      }
+
+      // Function to delete cryptocurrency
+      async function deleteCrypto(symbol) {
+        try {
+          const response = await fetch(`/api/crypto/${symbol}`, {
+            method: "DELETE",
+          });
+
+          if (response.ok) {
+            showMessage("Cryptocurrency deleted successfully");
+            loadCryptocurrencies();
+          } else {
+            throw new Error("Failed to delete cryptocurrency");
+          }
+        } catch (error) {
+          showMessage("Error deleting cryptocurrency", true);
+        }
+      }
+
+      // Event listeners
+      document
+        .getElementById("cryptoForm")
+        .addEventListener("submit", addCrypto);
+
+      // Load cryptocurrencies on page load
+      loadCryptocurrencies();
+    </script>
   </body>
 </html>

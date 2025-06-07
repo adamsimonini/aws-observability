@@ -92,6 +92,13 @@ cdk destroy EcrStack
 
 ### EcsStack
 
+### DynamoDB Stack
+
+```bash
+# Deploy
+cdk deploy DynamoDBStack
+```
+
 ```bash
 # Deploy
 cdk deploy EcsStack
