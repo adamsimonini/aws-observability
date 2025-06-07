@@ -40,5 +40,19 @@ jobs:
           ECR_REPOSITORY: aws-observability-app
           IMAGE_TAG: ${{ steps.increment-git-tag.outputs.git-tag }}
         run: |
+          echo "Building image with tag: $IMAGE_TAG"
+          # Build the image
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          # Tag as latest
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+          echo "Listing local images:"
+          docker images | grep $ECR_REPOSITORY
+
+          echo "Pushing images to ECR..."
+          # Push both tags
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+          echo "Verifying tags in ECR:"
+          aws ecr describe-images --repository-name $ECR_REPOSITORY --region ca-central-1
