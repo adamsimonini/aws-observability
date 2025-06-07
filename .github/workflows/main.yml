@@ -22,10 +22,16 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
+      - name: Make script executable
+        run: chmod +x ./build_image/git_update.sh
+
       - name: Automatic Tagging of Releases
         id: increment-git-tag
         run: |
-          bash ./build_image/git_update.sh -v major
+          SCRIPT_PATH="$(pwd)/build_image/git_update.sh"
+          echo "Script path: $SCRIPT_PATH"
+          ls -l "$SCRIPT_PATH"
+          bash "$SCRIPT_PATH" -v major
 
       - name: Build, Tag, and Push the Image to Amazon ECR
         id: build-image
