@@ -2,6 +2,8 @@
 
 local-aws-deployment-observability
 
+cdk bootstrap aws://776080139191/ca-central-1
+
 ### Confirm identity in AWS - required if credentials are off
 
 ```
