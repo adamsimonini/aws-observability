@@ -154,9 +154,9 @@ export class EcsStack extends cdk.Stack {
       allowAllOutbound: true,
     });
 
-    // IMPORTANT: Make sure the CIDR matches your current IP or open for testing
+    // Only allow HTTP traffic from specific IP
     securityGroup.addIngressRule(
-      ec2.Peer.ipv4("70.29.27.172/32"), // Replace with your IP or 0.0.0.0/0 for testing
+      ec2.Peer.ipv4("216.25.243.88/32"),
       ec2.Port.tcp(3000),
       "Allow inbound HTTP traffic from specific IP"
     );
