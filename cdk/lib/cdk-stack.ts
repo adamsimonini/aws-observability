@@ -6,6 +6,7 @@ import * as logs from "aws-cdk-lib/aws-logs";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
+import * as wafv2 from "aws-cdk-lib/aws-wafv2";
 import { Construct } from "constructs";
 
 // Base VPC Stack
@@ -147,6 +148,51 @@ export class EcsStack extends cdk.Stack {
       portMappings: [{ containerPort: 3000 }],
     });
 
+    // Create WAF Web ACL
+    const webAcl = new wafv2.CfnWebACL(this, "AppWebACL", {
+      defaultAction: { allow: {} },
+      scope: "REGIONAL",
+      visibilityConfig: {
+        cloudWatchMetricsEnabled: true,
+        metricName: "AppWebACLMetric",
+        sampledRequestsEnabled: true,
+      },
+      rules: [
+        {
+          name: "RateLimit",
+          priority: 1,
+          statement: {
+            rateBasedStatement: {
+              limit: 500,
+              aggregateKeyType: "IP",
+            },
+          },
+          action: { block: {} },
+          visibilityConfig: {
+            cloudWatchMetricsEnabled: true,
+            metricName: "RateLimitMetric",
+            sampledRequestsEnabled: true,
+          },
+        },
+        {
+          name: "AWSManagedRulesCommonRuleSet",
+          priority: 2,
+          overrideAction: { none: {} },
+          statement: {
+            managedRuleGroupStatement: {
+              vendorName: "AWS",
+              name: "AWSManagedRulesCommonRuleSet",
+            },
+          },
+          visibilityConfig: {
+            cloudWatchMetricsEnabled: true,
+            metricName: "AWSManagedRulesCommonRuleSetMetric",
+            sampledRequestsEnabled: true,
+          },
+        },
+      ],
+    });
+
     // Security Group for the Fargate service
     const securityGroup = new ec2.SecurityGroup(this, "AppServiceSG", {
       vpc,
@@ -154,11 +200,11 @@ export class EcsStack extends cdk.Stack {
       allowAllOutbound: true,
     });
 
-    // Only allow HTTP traffic from specific IP
+    // Allow HTTP traffic from anywhere (WAF will handle the security)
     securityGroup.addIngressRule(
-      ec2.Peer.ipv4("216.25.243.88/32"),
+      ec2.Peer.anyIpv4(),
       ec2.Port.tcp(3000),
-      "Allow inbound HTTP traffic from specific IP"
+      "Allow inbound HTTP traffic (protected by WAF)"
     );
 
     // Fargate Service with assignPublicIp enabled on public subnets
