@@ -7,6 +7,7 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as wafv2 from "aws-cdk-lib/aws-wafv2";
+import * as elbv2 from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import { Construct } from "constructs";
 
 // Base VPC Stack
@@ -16,10 +17,44 @@ export class VpcStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    // Create IAM role for VPC operations
+    const vpcRole = new iam.Role(this, "VpcRole", {
+      assumedBy: new iam.ServicePrincipal("ec2.amazonaws.com"),
+    });
+
+    // Add necessary permissions
+    vpcRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: [
+          "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:RevokeSecurityGroupIngress",
+          "ec2:AuthorizeSecurityGroupEgress",
+          "ec2:RevokeSecurityGroupEgress",
+          "ec2:CreateSecurityGroup",
+          "ec2:DeleteSecurityGroup",
+          "ec2:DescribeSecurityGroups",
+        ],
+        resources: ["*"],
+      })
+    );
+
     this.vpc = new ec2.Vpc(this, "AppVpc", {
-      maxAzs: 1,
-      natGateways: 0,
+      maxAzs: 2,
+      natGateways: 1,
       vpcName: "AppVpc",
+      ipAddresses: ec2.IpAddresses.cidr("172.16.0.0/16"),
+      subnetConfiguration: [
+        {
+          cidrMask: 24,
+          name: "Public",
+          subnetType: ec2.SubnetType.PUBLIC,
+        },
+        {
+          cidrMask: 24,
+          name: "Private",
+          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+        },
+      ],
     });
   }
 }
@@ -207,17 +242,64 @@ export class EcsStack extends cdk.Stack {
       "Allow inbound HTTP traffic (protected by WAF)"
     );
 
-    // Fargate Service with assignPublicIp enabled on public subnets
+    // Create ALB Security Group
+    const albSecurityGroup = new ec2.SecurityGroup(this, "AlbSecurityGroup", {
+      vpc,
+      description: "Security group for the ALB",
+      allowAllOutbound: true,
+    });
+
+    // Allow inbound HTTP traffic to ALB
+    albSecurityGroup.addIngressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(80),
+      "Allow inbound HTTP traffic to ALB"
+    );
+
+    // Create Application Load Balancer
+    const alb = new elbv2.ApplicationLoadBalancer(this, "AppAlb", {
+      vpc,
+      internetFacing: true,
+      securityGroup: albSecurityGroup,
+      vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
+    });
+
+    // Add HTTP listener
+    const listener = alb.addListener("HttpListener", {
+      port: 80,
+      open: true,
+    });
+
+    // Modify Fargate Service to use ALB
     const service = new ecs.FargateService(this, "AppService", {
       cluster,
       taskDefinition,
       desiredCount: 1,
-      assignPublicIp: true,
-      vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
+      assignPublicIp: false,
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
       securityGroups: [securityGroup],
       circuitBreaker: { rollback: true },
       maxHealthyPercent: 200,
       minHealthyPercent: 50,
+    });
+
+    // Add target group
+    const targetGroup = listener.addTargets("AppTargetGroup", {
+      port: 3000,
+      protocol: elbv2.ApplicationProtocol.HTTP,
+      targets: [service],
+      healthCheck: {
+        path: "/health",
+        interval: cdk.Duration.seconds(30),
+        timeout: cdk.Duration.seconds(5),
+        healthyHttpCodes: "200",
+      },
+    });
+
+    // Output the ALB DNS name
+    new cdk.CfnOutput(this, "LoadBalancerDNS", {
+      value: alb.loadBalancerDnsName,
+      description: "The DNS name of the load balancer",
     });
 
     // CloudWatch Alarms
