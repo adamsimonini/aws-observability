@@ -13,7 +13,7 @@ import { Construct } from "constructs";
 // Base VPC Stack
 export class VpcStack extends cdk.Stack {
   public readonly vpc: ec2.Vpc;
-
+p[]
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 

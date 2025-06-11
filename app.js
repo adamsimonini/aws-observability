@@ -1,5 +1,33 @@
+const AWSXRay = require("aws-xray-sdk");
+const AWS = AWSXRay.captureAWS(require("@aws-sdk/client-dynamodb")); // For newer v3 SDK, this is partial
 const express = require("express");
 const rateLimit = require("express-rate-limit");
+
+// Patch Express
+AWSXRay.captureHTTPsGlobal(require("http"));
+AWSXRay.captureHTTPsGlobal(require("https"));
+
+// Create X-Ray Express Middleware
+const app = express();
+app.use(AWSXRay.express.openSegment("CryptoApp")); // Service name
+
+// Standard middleware
+app.use(express.json());
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: "Too many requests from this IP, please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(limiter);
+
+// Static files
+app.use(express.static("public"));
+
+// DynamoDB Client (manually wrapped because X-Ray doesn't fully auto-instrument AWS SDK v3)
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const {
   DynamoDBDocumentClient,
@@ -8,32 +36,12 @@ const {
   DeleteCommand,
   QueryCommand,
 } = require("@aws-sdk/lib-dynamodb");
-const app = express();
-const port = process.env.PORT || 3000;
 
-// Initialize DynamoDB client
-const client = new DynamoDBClient({ region: process.env.AWS_REGION });
+const rawClient = new DynamoDBClient({ region: process.env.AWS_REGION });
+const client = AWSXRay.captureAWSv3Client(rawClient); // Wrap low-level client
 const docClient = DynamoDBDocumentClient.from(client);
 
-// Enable JSON parsing for request bodies
-app.use(express.json());
-
-// Rate limiting configuration
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: "Too many requests from this IP, please try again later.",
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-});
-
-// Apply rate limiting to all routes
-app.use(limiter);
-
-// Serve static files from the public directory
-app.use(express.static("public"));
-
-// Health check endpoint
+// Health check
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "healthy" });
 });
@@ -105,7 +113,7 @@ app.delete("/api/crypto/:symbol", async (req, res) => {
       TableName: "aws-observability-crypto-table",
       Key: {
         id: symbol,
-        timestamp: "latest", // You might want to handle this differently
+        timestamp: "latest", // Consider adjusting this for real deletion
       },
     });
 
@@ -117,11 +125,15 @@ app.delete("/api/crypto/:symbol", async (req, res) => {
   }
 });
 
-// Main endpoint now serves the HTML page
+// Serve HTML
 app.get("/", (req, res) => {
   res.sendFile(__dirname + "/public/index.html");
 });
 
+// Close X-Ray segment after response
+app.use(AWSXRay.express.closeSegment());
+
+const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
