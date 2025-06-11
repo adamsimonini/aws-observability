@@ -1,5 +1,4 @@
 const AWSXRay = require("aws-xray-sdk");
-const AWS = AWSXRay.captureAWS(require("@aws-sdk/client-dynamodb")); // For newer v3 SDK, this is partial
 const express = require("express");
 const rateLimit = require("express-rate-limit");
 
@@ -37,8 +36,9 @@ const {
   QueryCommand,
 } = require("@aws-sdk/lib-dynamodb");
 
+// Initialize the DynamoDB client
 const rawClient = new DynamoDBClient({ region: process.env.AWS_REGION });
-const client = AWSXRay.captureAWSv3Client(rawClient); // Wrap low-level client
+const client = AWSXRay.captureAWSv3Client(rawClient);
 const docClient = DynamoDBDocumentClient.from(client);
 
 // Health check
