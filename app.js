@@ -109,27 +109,36 @@ app.delete("/api/crypto/:symbol", async (req, res) => {
   try {
     const { symbol } = req.params;
 
-    // First, get the item to get its timestamp
-    const getCommand = new GetCommand({
+    // First, get the item using the timestamp-index
+    const queryCommand = new QueryCommand({
       TableName: "aws-observability-crypto-table",
-      Key: {
-        id: symbol,
-        timestamp: "latest",
+      IndexName: "timestamp-index",
+      KeyConditionExpression: "#type = :type AND #id = :id",
+      ExpressionAttributeNames: {
+        "#type": "type",
+        "#id": "id",
+      },
+      ExpressionAttributeValues: {
+        ":type": "crypto",
+        ":id": symbol,
       },
     });
 
-    const item = await docClient.send(getCommand);
+    const result = await docClient.send(queryCommand);
 
-    if (!item.Item) {
+    if (!result.Items || result.Items.length === 0) {
       return res.status(404).json({ error: "Cryptocurrency not found" });
     }
+
+    // Get the most recent item
+    const item = result.Items[0];
 
     // Then delete using the correct timestamp
     const deleteCommand = new DeleteCommand({
       TableName: "aws-observability-crypto-table",
       Key: {
         id: symbol,
-        timestamp: item.Item.timestamp,
+        timestamp: item.timestamp,
       },
     });
 
