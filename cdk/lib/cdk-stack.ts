@@ -287,6 +287,8 @@ export class EcsStack extends cdk.Stack {
       circuitBreaker: { rollback: true },
       maxHealthyPercent: 200,
       minHealthyPercent: 50,
+      enableECSManagedTags: true,
+      propagateTags: ecs.PropagatedTagSource.SERVICE,
     });
 
     // Add target group
