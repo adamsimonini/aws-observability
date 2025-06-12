@@ -109,15 +109,31 @@ app.delete("/api/crypto/:symbol", async (req, res) => {
   try {
     const { symbol } = req.params;
 
-    const command = new DeleteCommand({
+    // First, get the item to get its timestamp
+    const getCommand = new GetCommand({
       TableName: "aws-observability-crypto-table",
       Key: {
         id: symbol,
-        timestamp: "latest", // Consider adjusting this for real deletion
+        timestamp: "latest",
       },
     });
 
-    await docClient.send(command);
+    const item = await docClient.send(getCommand);
+
+    if (!item.Item) {
+      return res.status(404).json({ error: "Cryptocurrency not found" });
+    }
+
+    // Then delete using the correct timestamp
+    const deleteCommand = new DeleteCommand({
+      TableName: "aws-observability-crypto-table",
+      Key: {
+        id: symbol,
+        timestamp: item.Item.timestamp,
+      },
+    });
+
+    await docClient.send(deleteCommand);
     res.json({ message: "Cryptocurrency deleted successfully" });
   } catch (error) {
     console.error("Error deleting cryptocurrency:", error);

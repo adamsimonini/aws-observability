@@ -191,12 +191,12 @@
             div.className = "crypto-item";
             div.innerHTML = `
               <div>
-                <strong>${crypto.symbol}</strong> - ${crypto.name}
+                <strong>${crypto.id}</strong> - ${crypto.name}
                 <br>
                 Price: $${crypto.price.toFixed(2)}
               </div>
               <button class="delete-btn" onclick="deleteCrypto('${
-                crypto.symbol
+                crypto.id
               }')">Delete</button>
             `;
             cryptoList.appendChild(div);
