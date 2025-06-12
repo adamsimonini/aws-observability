@@ -264,6 +264,12 @@ export class EcsStack extends cdk.Stack {
       vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
     });
 
+    // Attach WAF to ALB
+    new wafv2.CfnWebACLAssociation(this, "WebACLAssociation", {
+      resourceArn: alb.loadBalancerArn,
+      webAclArn: webAcl.attrArn,
+    });
+
     // Add HTTP listener
     const listener = alb.addListener("HttpListener", {
       port: 80,
